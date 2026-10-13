@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gestão de Condomínio</title>
+  <script src="https://tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 text-gray-800 font-sans min-h-screen p-6">
+
+  <div class="max-w-6xl mx-auto">
+    <!-- Header -->
+    <header class="flex items-center gap-3 border-b pb-4 mb-8">
+      <span class="text-3xl">🏢</span>
+      <h1 class="text-2xl font-bold text-gray-900">Painel do Condomínio</h1>
+    </header>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      
+      <!-- Coluna 1 e 2: Frações -->
+      <div class="bg-white p-6 rounded-xl border shadow-sm lg:col-span-2">
+        <h2 class="text-lg font-semibold mb-4 flex items-center gap-2">🏠 Frações Autónomas</h2>
+        
+        <form id="formFracao" class="grid grid-cols-2 gap-3 mb-6 bg-gray-50 p-4 rounded-lg border">
+          <input type="text" id="fracaoIdent" placeholder="Fração (Ex: 1º Esq)" class="border p-2 rounded text-sm bg-white" required>
+          <input type="number" id="fracaoPerm" placeholder="Permilagem (Ex: 50)" class="border p-2 rounded text-sm bg-white" required>
+          <input type="text" id="fracaoProp" placeholder="Nome do Proprietário" class="border p-2 rounded text-sm bg-white col-span-2" required>
+          <button type="submit" class="col-span-2 bg-emerald-600 hover:bg-emerald-700 text-white p-2 rounded font-medium text-sm">Adicionar Fração</button>
+        </form>
+
+        <table class="w-full text-left text-sm">
+          <thead>
+            <tr class="border-b text-gray-400">
+              <th class="pb-2">Fração</th>
+              <th class="pb-2">Proprietário</th>
+              <th class="pb-2 text-right">Permilagem</th>
+            </tr>
+          </thead>
+          <tbody id="tabelaFracoes">
+            <!-- Inserido via JS -->
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Coluna 3: Avarias -->
+      <div class="bg-white p-6 rounded-xl border shadow-sm flex flex-col gap-4">
+        <h2 class="text-lg font-semibold flex items-center gap-2 text-gray-900">⚠️ Avarias e Ocorrências</h2>
+        
+        <form id="formOcorrencia" class="flex flex-col gap-2 bg-gray-50 p-4 rounded-lg border">
+          <input type="text" id="ocTitulo" placeholder="Título do problema" class="border p-2 rounded text-sm bg-white" required>
+          <textarea id="ocDesc" placeholder="Descrição curta..." class="border p-2 rounded text-sm h-20 bg-white resize-none" required></textarea>
+          <button type="submit" class="bg-gray-900 hover:bg-gray-800 text-white p-2 rounded font-medium text-sm">Registar Ocorrência</button>
+        </form>
+
+        <div id="listaOcorrencias" class="flex flex-col gap-3 overflow-y-auto max-h-[350px]">
+          <!-- Inserido via JS -->
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    const API_URL = 'http://localhost:8080/api';
+
+    async function carregarDados() {
+      try {
+        // Carregar Frações
+        const resFracoes = await fetch(`${API_URL}/fracoes`);
+        const fracoes = await resFracoes.json();
+        const tabela = document.getElementById('tabelaFracoes');
+        tabela.innerHTML = fracoes.map(f => `
+          <tr class="border-b last:border-0 hover:bg-gray-50">
+            <td class="py-3 font-semibold text-gray-900">${f.identificacao}</td>
+            <td class="py-3 text-gray-600">${f.proprietario_nome || 'N/A'}</td>
+            <td class="py-3 text-right text-gray-500">${f.permilagem} ‰</td>
+          </tr>
+        `).join('');
+
+        // Carregar Ocorrências
+        const resOcorrencias = await fetch(`${API_URL}/ocorrencias`);
+        const ocorrencias = await resOcorrencias.json();
+        const lista = document.getElementById('listaOcorrencias');
+        lista.innerHTML = ocorrencias.map(o => `
+          <div class="p-3 bg-gray-50 rounded-lg border flex flex-col gap-1">
+            <div class="flex justify-between items-start">
+              <span class="font-semibold text-sm text-gray-900">${o.titulo}</span>
+              <span class="text-[10px] px-2 py-0.5 rounded-full font-bold bg-amber-100 text-amber-800">${o.estado}</span>
+            </div>
+            <p class="text-xs text-gray-500">${o.descricao}</p>
+          </div>
+        `).join('');
+      } catch (err) {
+        console.error("Erro ao puxar dados do servidor Node:", err);
+      }
+    }
+
+    // Submeter Nova Fração
+    document.getElementById('formFracao').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      await fetch(`${API_URL}/fracoes`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          identificacao: document.getElementById('fracaoIdent').value,
+          permilagem: Number(document.getElementById('fracaoPerm').value),
+          proprietario_nome: document.getElementById('fracaoProp').value
+        })
+      });
+      document.getElementById('formFracao').reset();
+      carregarDados();
+    });
+
+    // Submeter Nova Ocorrência
+    document.getElementById('formOcorrencia').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      await fetch(`${API_URL}/ocorrencias`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          titulo: document.getElementById('ocTitulo').value,
+          descricao: document.getElementById('ocDesc').value
+        })
+      });
+      document.getElementById('formOcorrencia').reset();
+      carregarDados();
+    });
+
+    carregarDados();
+  </script>
+</body>
+</html>
